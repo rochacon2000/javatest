@@ -1,0 +1,7 @@
+node_modules/
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/resources/downloads
+env-variables/.env.local
+playwright/.auth/*
