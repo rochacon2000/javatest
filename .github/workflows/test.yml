@@ -1,0 +1,29 @@
+name: Test Runner Code Validation
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '*'
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  code-validation:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - name: Set up Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '20.11.1'
+        - name: Check for TypeScript Compile Errors
+          run: |
+            npm ci
+            npm install --save-dev typescript
+            npx tsc --noEmit
+            
