@@ -14,15 +14,21 @@ on:
 
 jobs:
   code-validation:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-        - name: Set up Node.js
-          uses: actions/setup-node@v4
-          with:
-            node-version: '20.11.1'
-        - name: Run Playwright Tests
-          run: |
-            npx playwright install --with-deps
-            npx playwright test --reporter=list
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+      - name: Clean environment
+        run: |
+          npm ci
+      - name: Install dependencies
+        run: |
+          npm install
+      - name: Run Playwright Tests
+        run: |
+          npx playwright install --with-deps
+          npx playwright test --reporter=list
             
