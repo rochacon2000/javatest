@@ -1,34 +1,33 @@
-name: Test Runner Code Validation
+name: Playwright Changed Tests
 
 on:
-  push:
-    branches:
-      - '**'
-    tags-ignore:
-      - '*'
   pull_request:
-    branches:
-      - '**'
-  workflow_dispatch:
-  workflow_call:
+    paths:
+      - "tests/**"
 
 jobs:
-  code-validation:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '20.11.1'
-      - name: Clean environment
-        run: |
-          npm ci
+          fetch-depth: 0 # needed for git diff
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Get changed test files
+        id: changed
         run: |
-          npm install
-      - name: Run Playwright Tests
-        run: |
-          npx playwright install --with-deps
-          npx playwright test --reporter=list
-  
+          echo "files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '^tests/.*\\.spec\\.ts$' || true)" >> $GITHUB_OUTPUT
+
+      - name: Run only changed tests
+        if: steps.changed.outputs.files != ''
+        run: npx playwright test ${{ steps.changed.outputs.files }}
