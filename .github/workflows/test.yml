@@ -25,7 +25,7 @@ jobs:
         id: changes
         run: |
           CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-          echo "changed=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          "changed=$CHANGED_FILES" >> $GITHUB_OUTPUT
 
       - name: Run smart tests
         run: |
