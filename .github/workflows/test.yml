@@ -1,9 +1,7 @@
-name: Playwright Changed Tests
+name: Playwright Smart Tests
 
 on:
   pull_request:
-    paths:
-      - "tests/**"
 
 jobs:
   test:
@@ -11,31 +9,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # needed for git diff
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.11.1'
+          node-version: "20"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browsers
+      - name: Install Playwright (Chromium only)
         run: npx playwright install --with-deps chromium
 
-      - name: Get changed test files
-        id: changed
+      - name: Detect changes
+        id: changes
         run: |
-          echo "Creating a list of tests that have changed"
-          PR_BASE_SHA=$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")
-          PR_HEAD_SHA=$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")
-          FILES=$(git diff --name-only "$PR_BASE_SHA".."$PR_HEAD_SHA" | grep ".spec.ts" || true)
-          FILES=$(printf '%s' "$FILES" | tr '\n' ' ')
-          echo "files=$FILES" >> "$GITHUB_OUTPUT"
-          echo "CHANGED=$FILES" >> $GITHUB_ENV
-      - name: Run only changed tests
-        if: steps.changed.outputs.files != ''
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "changed=$CHANGED_FILES" >> $GITHUB_OUTPUT
+
+      - name: Run smart tests
         run: |
-          echo "CHANGED = ${{ steps.changed.outputs.files }}"
-          echo "The github event is: ${{ github.event_name }}"
-          npx playwright test --workers=1 ${{ steps.changed.outputs.files }}
+          if echo "${{ steps.changes.outputs.changed }}" | grep -q '^src/'; then
+            echo "Source code changed → run ALL tests"
+            npx playwright test
+          else
+            TESTS=$(echo "${{ steps.changes.outputs.changed }}" | grep '^tests/.*\.spec\.ts$' || true)
+            if [ -n "$TESTS" ]; then
+              echo "Only test files changed → run only changed tests"
+              npx playwright test $TESTS
+            else
+              echo "No relevant changes → skipping tests"
+            fi
+          fi
