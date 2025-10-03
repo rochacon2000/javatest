@@ -1,43 +1,49 @@
-name: Playwright Smart Tests
+name: Playwright Changed Tests
 
 on:
   pull_request:
+    # Trigger on any changes in the repo
+    paths:
+      - '**/*'
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
+      # 1️⃣ Checkout code
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Needed for git diff
 
+      # 2️⃣ Setup Node.js
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Install dependencies
-        run: npm ci
+      # 3️⃣ Install dependencies
+      - run: npm ci
 
-      - name: Install Playwright (Chromium only)
-        run: npx playwright install --with-deps chromium
+      # 4️⃣ Install Playwright Chromium only
+      - run: npx playwright install --with-deps chromium
 
-      - name: Detect changes
-        id: changes
+      # 5️⃣ Detect changed test files against master
+      - name: Get changed test files
+        id: changed
         run: |
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-          "changed=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          git fetch origin master
+          FILES=$(git diff --name-status origin/master | grep '^tests/.*\.spec\.ts$' | awk '{print $2}' || true)
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+          echo "Changed test files: $FILES"
 
-      - name: Run smart tests
+      # 6️⃣ Run only changed tests
+      - name: Run only changed tests
+        if: steps.changed.outputs.files != ''
         run: |
-          if echo "${{ steps.changes.outputs.changed }}" | grep -q '^src/'; then
-            echo "Source code changed → run ALL tests"
-            npx playwright test
-          else
-            TESTS=$(echo "${{ steps.changes.outputs.changed }}" | grep '^tests/.*\.spec\.ts$' || true)
-            if [ -n "$TESTS" ]; then
-              echo "Only test files changed → run only changed tests"
-              npx playwright test $TESTS
-            else
-              echo "No relevant changes → skipping tests"
-            fi
-          fi
+          echo "Running only changed tests..."
+          npx playwright test ${{ steps.changed.outputs.files }}
+
+      # 7️⃣ Optional: skip if no tests changed
+      - name: No tests changed
+        if: steps.changed.outputs.files == ''
+        run: echo "No test files changed. Skipping Playwright run."
