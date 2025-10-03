@@ -1,4 +1,3 @@
-/**
 import { test, expect } from '@playwright/test';
 
 // This sample simulates a larger test suite
@@ -14,5 +13,3 @@ for (var i = 0; i < 3; i++) {
 		await expect(page).toHaveURL(/.*intro/);
 	});
 }
-
-*/
