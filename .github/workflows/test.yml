@@ -15,19 +15,27 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20.11.1'
 
       - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
 
       - name: Get changed test files
         id: changed
         run: |
-          echo "files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '^tests/.*\\.spec\\.ts$' || true)" >> $GITHUB_OUTPUT
+          echo "Creating a list of tests that have changed"
+          PR_BASE_SHA=$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")
+          PR_HEAD_SHA=$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")
+          FILES=$(git diff --name-only "$PR_BASE_SHA".."$PR_HEAD_SHA" | grep ".spec.ts" || true)
+          FILES=$(printf '%s' "$FILES" | tr '\n' ' ')
+          echo "CHANGED=$FILES" >> $GITHUB_ENV
 
       - name: Run only changed tests
         if: steps.changed.outputs.files != ''
-        run: npx playwright test ${{ steps.changed.outputs.files }}
+        run: |
+          echo "CHANGED = ${{ env.CHANGED }}"
+          echo "The github event is: ${{ github.event_name }}"
+          URL=${{ env.BASE_URL}} npx playwright test --workers=1 ${{ env.CHANGED }}
