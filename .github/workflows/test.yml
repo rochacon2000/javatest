@@ -31,11 +31,11 @@ jobs:
           PR_HEAD_SHA=$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")
           FILES=$(git diff --name-only "$PR_BASE_SHA".."$PR_HEAD_SHA" | grep ".spec.ts" || true)
           FILES=$(printf '%s' "$FILES" | tr '\n' ' ')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
           echo "CHANGED=$FILES" >> $GITHUB_ENV
-
       - name: Run only changed tests
         if: steps.changed.outputs.files != ''
         run: |
-          echo "CHANGED = ${{ env.CHANGED }}"
+          echo "CHANGED = ${{ steps.changed.outputs.files }}"
           echo "The github event is: ${{ github.event_name }}"
-          URL=${{ env.BASE_URL}} npx playwright test --workers=1 ${{ env.CHANGED }}
+          npx playwright test --workers=1 ${{ steps.changed.outputs.files }}
