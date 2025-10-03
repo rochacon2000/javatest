@@ -1,28 +1,43 @@
-name: Test Runner Code Validation
+name: Playwright Smart Tests
 
 on:
-  push:
-    branches:
-      - '**'
-    tags-ignore:
-      - '*'
   pull_request:
-    branches:
-      - '**'
-  workflow_dispatch:
-  workflow_call:
 
 jobs:
-  code-validation:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-        - name: Set up Node.js
-          uses: actions/setup-node@v4
-          with:
-            node-version: '20.11.1'
-        - name: Run Playwright Tests
-          run: |
-            npx playwright install --with-deps
-            npx playwright test --reporter=list
-            
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright (Chromium only)
+        run: npx playwright install --with-deps chromium
+
+      - name: Detect changes
+        id: changes
+        run: |
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "changed=$CHANGED_FILES" >> $GITHUB_OUTPUT
+
+      - name: Run smart tests
+        run: |
+          if echo "${{ steps.changes.outputs.changed }}" | grep -q '^src/'; then
+            echo "Source code changed → run ALL tests"
+            npx playwright test
+          else
+            TESTS=$(echo "${{ steps.changes.outputs.changed }}" | grep '^tests/.*\.spec\.ts$' || true)
+            if [ -n "$TESTS" ]; then
+              echo "Only test files changed → run only changed tests"
+              npx playwright test $TESTS
+            else
+              echo "No relevant changes → skipping tests"
+            fi
+          fi

@@ -1,0 +1,33 @@
+name: Playwright Changed Tests
+
+on:
+  pull_request:
+    paths:
+      - "tests/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # needed for git diff
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Get changed test files
+        id: changed
+        run: |
+          echo "files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '^tests/.*\\.spec\\.ts$' || true)" >> $GITHUB_OUTPUT
+
+      - name: Run only changed tests
+        if: steps.changed.outputs.files != ''
+        run: npx playwright test ${{ steps.changed.outputs.files }}
