@@ -1,9 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// This sample simulates a larger test suite
-for (var i = 0; i < 3; i++) {
-
-	test(' test ' + i, async ({ page }) => {
+test(' test 09', async ({ page }) => {
 		await page.goto('https://playwright.dev/');
 		
 		// Click the get started link.
@@ -12,4 +9,3 @@ for (var i = 0; i < 3; i++) {
 		// Expect the URL to contain intro.
 		await expect(page).toHaveURL(/.*intro/);
 	});
-}
